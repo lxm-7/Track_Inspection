@@ -13,7 +13,7 @@
 <l>tuple_sort (FilesRight, FilesRight)</l>
 <l>tuple_sort (FilesLeft, FilesLeft)</l>
 <c></c>
-<c>* 2. 最小长度</c>
+<c>* 2. 长度</c>
 <l>if (|FilesRight| &lt; |FilesLeft|)</l>
 <l>    Num := |FilesRight|</l>
 <l>else</l>
@@ -28,41 +28,48 @@
 <l>    read_region (RegionRight, FilesRight[i])</l>
 <l>    read_region (RegionLeft, FilesLeft[i])</l>
 <c></c>
-<c>    * 最小外接矩形（只需要右侧决定方向）</c>
-<l>    smallest_rectangle2 (RegionRight, RowR, ColR, PhiR, Length1R, Length2R)</l>
+<c>    * 外接矩形</c>
+<l>    smallest_rectangle2 (RegionRight, RowR, ColR, PhiR, L1R, L2R)</l>
+<l>    smallest_rectangle2 (RegionLeft, RowL, ColL, PhiL, L1L, L2L)</l>
 <c></c>
-<c>    * 长边方向</c>
-<l>    if (Length1R &gt;= Length2R)</l>
+<c>    * 右长边方向</c>
+<l>    if (L1R &gt;= L2R)</l>
 <l>        PhiMain := PhiR</l>
 <l>    else</l>
 <l>        PhiMain := PhiR + rad(90)</l>
 <l>    endif</l>
 <c></c>
-<c>    * 平移距离</c>
-<l>    Distance := 1000</l>
+<c>    * 右移动 +1000</c>
+<l>    dRowR := -1000 * sin(PhiMain)</l>
+<l>    dColR := 1000 * cos(PhiMain)</l>
+<l>    vector_angle_to_rigid (0, 0, 0, dRowR, dColR, 0, HomMatR)</l>
+<l>    affine_trans_region (RegionRight, RegionRightMoved, HomMatR, 'nearest_neighbor')</l>
 <c></c>
-<c>    * 正方向（给左）</c>
-<l>    dRow_Pos := -Distance * sin(PhiMain)</l>
-<l>    dCol_Pos :=  Distance * cos(PhiMain)</l>
+<c>    * 左移动 -500（反方向）</c>
+<l>    dRowL := 500 * sin(PhiMain)</l>
+<l>    dColL := -500 * cos(PhiMain)</l>
+<l>    vector_angle_to_rigid (0, 0, 0, dRowL, dColL, 0, HomMatL)</l>
+<l>    affine_trans_region (RegionLeft, RegionLeftMoved1, HomMatL, 'nearest_neighbor')</l>
 <c></c>
-<c>    * 反方向（给右）</c>
-<l>    dRow_Neg := -dRow_Pos/2</l>
-<l>    dCol_Neg := -dCol_Pos/2</l>
+<c>    * 重新计算中心（移动后）</c>
+<l>    smallest_rectangle2 (RegionLeftMoved1, RowLM, ColLM, PhiLM, L1LM, L2LM)</l>
 <c></c>
-<c>    * 构造变换</c>
-<l>    vector_angle_to_rigid (0, 0, 0, dRow_Pos, dCol_Pos, 0, HomMat2D_Pos)</l>
-<l>    vector_angle_to_rigid (0, 0, 0, dRow_Neg, dCol_Neg, 0, HomMat2D_Neg)</l>
+<c>    * 左右翻转（最终版）</c>
+<l>    hom_mat2d_identity (HomMat2DIdentity)</l>
+<l>    hom_mat2d_translate (HomMat2DIdentity, -RowLM, -ColLM, HomMatShift1)</l>
+<l>    hom_mat2d_rotate (HomMatShift1, -PhiMain, 0, 0, HomMatRot1)</l>
+<l>    hom_mat2d_scale (HomMatRot1, 1, -1, 0, 0, HomMatMirror)</l>
+<l>    hom_mat2d_rotate (HomMatMirror, PhiMain, 0, 0, HomMatRot2)</l>
+<l>    hom_mat2d_translate (HomMatRot2, RowLM, ColLM, HomMatFinal)</l>
 <c></c>
-<c>    * 平移</c>
-<l>    affine_trans_region (RegionLeft, RegionLeftMoved, HomMat2D_Pos, 'nearest_neighbor')</l>
-<l>    affine_trans_region (RegionRight, RegionRightMoved, HomMat2D_Neg, 'nearest_neighbor')</l>
+<l>    affine_trans_region (RegionLeftMoved1, RegionLeftFinal, HomMatFinal, 'nearest_neighbor')</l>
 <c></c>
 <c>    * 显示</c>
 <l>    dev_clear_window ()</l>
 <l>    dev_set_color ('red')</l>
 <l>    dev_display (RegionRightMoved)</l>
 <l>    dev_set_color ('green')</l>
-<l>    dev_display (RegionLeftMoved)</l>
+<l>    dev_display (RegionLeftFinal)</l>
 <c></c>
 <l>    wait_seconds (0.05)</l>
 <c></c>
