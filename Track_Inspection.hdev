@@ -13,7 +13,7 @@
 <l>tuple_sort (FilesRight, FilesRight)</l>
 <l>tuple_sort (FilesLeft, FilesLeft)</l>
 <c></c>
-<c>* 2. 长度</c>
+<c>* 2. 取最小长度</c>
 <l>if (|FilesRight| &lt; |FilesLeft|)</l>
 <l>    Num := |FilesRight|</l>
 <l>else</l>
@@ -22,54 +22,114 @@
 <c></c>
 <l>dev_set_draw ('margin')</l>
 <c></c>
-<c>* 3. 循环</c>
+<c>* 3. 循环处理Region</c>
 <l>for i := 0 to Num - 1 by 1</l>
 <c></c>
 <l>    read_region (RegionRight, FilesRight[i])</l>
 <l>    read_region (RegionLeft, FilesLeft[i])</l>
 <c></c>
-<c>    * 外接矩形</c>
-<l>    smallest_rectangle2 (RegionRight, RowR, ColR, PhiR, L1R, L2R)</l>
-<l>    smallest_rectangle2 (RegionLeft, RowL, ColL, PhiL, L1L, L2L)</l>
+<c>    *--- 平移 ---</c>
+<l>    move_region (RegionRight, RegionRightMoved, 0, 1000)</l>
+<l>    move_region (RegionLeft, RegionLeftMoved, 0, -500)</l>
+<c>    </c>
+<c>    *------------------------------------</c>
+<c>    * 找最低子区域（Right）</c>
+<c>    *------------------------------------</c>
+<l>    connection (RegionRightMoved, ConnR)</l>
+<l>    smallest_rectangle1 (ConnR, Row1R, Col1R, Row2R, Col2R)</l>
+<l>    tuple_max (Row2R, MaxRowR)</l>
+<l>    tuple_find (Row2R, MaxRowR, IndexR)</l>
+<l>    select_obj (ConnR, BottomRight, IndexR + 1)</l>
 <c></c>
-<c>    * 右长边方向</c>
-<l>    if (L1R &gt;= L2R)</l>
-<l>        PhiMain := PhiR</l>
-<l>    else</l>
-<l>        PhiMain := PhiR + rad(90)</l>
-<l>    endif</l>
+<c>    *------------------------------------</c>
+<c>    * 找最低子区域（Left）</c>
+<c>    *------------------------------------</c>
+<l>    connection (RegionLeftMoved, ConnL)</l>
+<l>    smallest_rectangle1 (ConnL, Row1L, Col1L, Row2L, Col2L)</l>
+<l>    tuple_max (Row2L, MaxRowL)</l>
+<l>    tuple_find (Row2L, MaxRowL, IndexL)</l>
+<l>    select_obj (ConnL, BottomLeft, IndexL + 1)</l>
+<c>    </c>
+<c>    *------------------------------------</c>
+<c>    * 极值点 + 连线</c>
+<c>    *------------------------------------</c>
+<l>    smallest_rectangle1 (BottomLeft, _, _, _, ColMaxL)</l>
+<l>    smallest_rectangle1 (BottomRight, _, ColMinR, _, _)</l>
 <c></c>
-<c>    * 右移动 +1000</c>
-<l>    dRowR := -1000 * sin(PhiMain)</l>
-<l>    dColR := 1000 * cos(PhiMain)</l>
-<l>    vector_angle_to_rigid (0, 0, 0, dRowR, dColR, 0, HomMatR)</l>
-<l>    affine_trans_region (RegionRight, RegionRightMoved, HomMatR, 'nearest_neighbor')</l>
+<l>    area_center (BottomLeft, _, RowL, _)</l>
+<l>    area_center (BottomRight, _, RowR, _)</l>
 <c></c>
-<c>    * 左移动 -500（反方向）</c>
-<l>    dRowL := 500 * sin(PhiMain)</l>
-<l>    dColL := -500 * cos(PhiMain)</l>
-<l>    vector_angle_to_rigid (0, 0, 0, dRowL, dColL, 0, HomMatL)</l>
-<l>    affine_trans_region (RegionLeft, RegionLeftMoved1, HomMatL, 'nearest_neighbor')</l>
+<l>    gen_contour_polygon_xld (Line, [RowL, RowR], [ColMaxL, ColMinR])</l>
 <c></c>
-<c>    * 重新计算中心（移动后）</c>
-<l>    smallest_rectangle2 (RegionLeftMoved1, RowLM, ColLM, PhiLM, L1LM, L2LM)</l>
+<c>    *------------------------------------</c>
+<c>    * 中点</c>
+<c>    *------------------------------------</c>
+<l>    MidRow := (RowL + RowR) / 2</l>
+<l>    MidCol := (ColMaxL + ColMinR) / 2</l>
 <c></c>
-<c>    * 左右翻转（最终版）</c>
-<l>    hom_mat2d_identity (HomMat2DIdentity)</l>
-<l>    hom_mat2d_translate (HomMat2DIdentity, -RowLM, -ColLM, HomMatShift1)</l>
-<l>    hom_mat2d_rotate (HomMatShift1, -PhiMain, 0, 0, HomMatRot1)</l>
-<l>    hom_mat2d_scale (HomMatRot1, 1, -1, 0, 0, HomMatMirror)</l>
-<l>    hom_mat2d_rotate (HomMatMirror, PhiMain, 0, 0, HomMatRot2)</l>
-<l>    hom_mat2d_translate (HomMatRot2, RowLM, ColLM, HomMatFinal)</l>
+<c>    *------------------------------------</c>
+<c>    * 垂线（长度1000像素）</c>
+<c>    *------------------------------------</c>
+<l>    dRow := RowR - RowL</l>
+<l>    dCol := ColMinR - ColMaxL</l>
 <c></c>
-<l>    affine_trans_region (RegionLeftMoved1, RegionLeftFinal, HomMatFinal, 'nearest_neighbor')</l>
+<c>    * 垂直方向</c>
+<l>    PerpRow := -dCol</l>
+<l>    PerpCol := dRow</l>
 <c></c>
+<c>    * 归一化</c>
+<l>    Length := sqrt(PerpRow*PerpRow + PerpCol*PerpCol)</l>
+<l>    PerpRowN := PerpRow / Length</l>
+<l>    PerpColN := PerpCol / Length</l>
+<c></c>
+<l>    HalfLen := 500</l>
+<l>    RowP1 := MidRow - HalfLen * PerpRowN</l>
+<l>    ColP1 := MidCol - HalfLen * PerpColN</l>
+<l>    RowP2 := MidRow + HalfLen * PerpRowN</l>
+<l>    ColP2 := MidCol + HalfLen * PerpColN</l>
+<c></c>
+<l>    gen_contour_polygon_xld (PerpLine, [RowP1, RowP2], [ColP1, ColP2])</l>
+<c></c>
+<c>    *------------------------------------</c>
+<c>    * 坐标系（中心800,800）</c>
+<c>    *------------------------------------</c>
+<l>    AxisLen := 600</l>
+<c>    </c>
+<l>    AxisCenterRow := 650</l>
+<l>    AxisCenterCol := 1100</l>
+<c></c>
+<c>    * X轴（水平线）</c>
+<l>    gen_contour_polygon_xld (AxisX, [AxisCenterRow, AxisCenterRow], [AxisCenterCol-AxisLen, AxisCenterCol+AxisLen])</l>
+<c>    </c>
+<c>    * Y轴（竖直线）</c>
+<l>    gen_contour_polygon_xld (AxisY, [AxisCenterRow-AxisLen, AxisCenterRow+AxisLen], [AxisCenterCol, AxisCenterCol])</l>
+<c>    </c>
+<c>    *------------------------------------</c>
 <c>    * 显示</c>
+<c>    *------------------------------------</c>
 <l>    dev_clear_window ()</l>
+<c></c>
 <l>    dev_set_color ('red')</l>
 <l>    dev_display (RegionRightMoved)</l>
+<c></c>
 <l>    dev_set_color ('green')</l>
-<l>    dev_display (RegionLeftFinal)</l>
+<l>    dev_display (RegionLeftMoved)</l>
+<c></c>
+<l>    dev_set_color ('blue')</l>
+<l>    dev_display (BottomRight)</l>
+<c></c>
+<l>    dev_set_color ('yellow')</l>
+<l>    dev_display (BottomLeft)</l>
+<c></c>
+<l>    dev_set_color ('cyan')</l>
+<l>    dev_display (Line)</l>
+<c></c>
+<l>    dev_set_color ('white')</l>
+<l>    dev_display (PerpLine)</l>
+<c></c>
+<l>    dev_set_color ('white')</l>
+<l>    dev_display (AxisX)</l>
+<l>    dev_display (AxisY)</l>
 <c></c>
 <l>    wait_seconds (0.05)</l>
 <c></c>
