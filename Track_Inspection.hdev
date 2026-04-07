@@ -22,6 +22,9 @@
 <c></c>
 <l>dev_set_draw ('margin')</l>
 <c></c>
+<l>AngleDegWindow := []</l>
+<l>RowDiffWindow := []</l>
+<c></c>
 <c>* 3. 循环处理Region</c>
 <l>for i := 0 to Num - 1 by 1</l>
 <c></c>
@@ -51,27 +54,27 @@
 <l>    select_obj (ConnL, BottomLeft, IndexL + 1)</l>
 <c>    </c>
 <c>    *------------------------------------</c>
-<c>    * 极值点 + 连线（用于角度计算）</c>
+<c>    * 极值点 + 连线（Left左下角 → Right右下角）</c>
 <c>    *------------------------------------</c>
-<l>    smallest_rectangle1 (BottomLeft, _, _, _, ColMaxL)</l>
-<l>    smallest_rectangle1 (BottomRight, _, ColMinR, _, _)</l>
+<l>    smallest_rectangle1 (BottomLeft, _, ColMinL, _, _)</l>
+<l>    smallest_rectangle1 (BottomRight, _, _, _, ColMaxR)</l>
 <c></c>
 <l>    area_center (BottomLeft, _, RowL, _)</l>
 <l>    area_center (BottomRight, _, RowR, _)</l>
 <c></c>
-<l>    gen_contour_polygon_xld (Line, [RowL, RowR], [ColMaxL, ColMinR])</l>
+<l>    gen_contour_polygon_xld (Line, [RowL, RowR], [ColMinL, ColMaxR])</l>
 <c></c>
 <c>    *------------------------------------</c>
-<c>    * 中点</c>
+<c>    * 中点（已统一）</c>
 <c>    *------------------------------------</c>
 <l>    MidRow := (RowL + RowR) / 2</l>
-<l>    MidCol := (ColMaxL + ColMinR) / 2</l>
+<l>    MidCol := (ColMinL + ColMaxR) / 2</l>
 <c></c>
 <c>    *------------------------------------</c>
-<c>    * 垂线（长度1000像素）</c>
+<c>    * 垂线（已统一）</c>
 <c>    *------------------------------------</c>
 <l>    dRow := RowR - RowL</l>
-<l>    dCol := ColMinR - ColMaxL</l>
+<l>    dCol := ColMaxR - ColMinL</l>
 <c></c>
 <l>    PerpRow := -dCol</l>
 <l>    PerpCol := dRow</l>
@@ -99,10 +102,10 @@
 <l>    gen_contour_polygon_xld (AxisY, [AxisCenterRow-AxisLen, AxisCenterRow+AxisLen], [AxisCenterCol, AxisCenterCol])</l>
 <c></c>
 <c>    *------------------------------------</c>
-<c>    * 角度计算（连线 vs X轴）</c>
+<c>    * 角度计算（已统一）</c>
 <c>    *------------------------------------</c>
 <l>    dRow1 := RowR - RowL</l>
-<l>    dCol1 := ColMinR - ColMaxL</l>
+<l>    dCol1 := ColMaxR - ColMinL</l>
 <c></c>
 <l>    RowA := AxisCenterRow</l>
 <l>    ColA := AxisCenterCol - AxisLen</l>
@@ -152,14 +155,12 @@
 <l>    dev_display (AxisY)</l>
 <c>    </c>
 <c>    *------------------------------------</c>
-<c>    * ✅ 验证1：用“同一条连线”做旋转验证（已修复）</c>
+<c>    * ✅ 验证1：旋转连线验证（完全一致）</c>
 <c>    *------------------------------------</c>
 <l>    vector_angle_to_rigid (MidRow, MidCol, -Angle1, MidRow, MidCol, 0, HomMatRotate)</l>
 <c></c>
-<c>    * ⭐ 关键：直接旋转连线</c>
 <l>    affine_trans_contour_xld (Line, LineRot, HomMatRotate)</l>
 <c></c>
-<c>    * 提取旋转后的两个点</c>
 <l>    get_contour_xld (LineRot, RowsRot, ColsRot)</l>
 <c></c>
 <l>    RowL_rot := RowsRot[0]</l>
@@ -168,7 +169,7 @@
 <l>    RowDiff := abs(RowL_rot - RowR_rot)</l>
 <c></c>
 <c>    *------------------------------------</c>
-<c>    * ✅ 验证2：点积公式验证</c>
+<c>    * ✅ 验证2：点积验证</c>
 <c>    *------------------------------------</c>
 <l>    Dot := dRow1*dRow2 + dCol1*dCol2</l>
 <c></c>
@@ -192,6 +193,12 @@
 <c>    *------------------------------------</c>
 <l>    dev_set_color ('white')</l>
 <l>    dev_display (LineRot)</l>
+<c></c>
+<c>    *------------------------------------</c>
+<c>    * 数据记录（已修复）</c>
+<c>    *------------------------------------</c>
+<l>    AngleDegWindow[i] := AngleDeg</l>
+<l>    RowDiffWindow[i] := RowDiff</l>
 <c></c>
 <l>    wait_seconds (0.05)</l>
 <c></c>
